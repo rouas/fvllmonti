@@ -344,8 +344,8 @@ def prunetransformer(args):
                     if args.verbose: print(name,"matrix size : ",param.shape[0], " * ", param.shape[1],)
                     layer_ntiles =  0
                     moy_param=torch.mean(torch.abs(param))
-                    for i in range(0, param.shape[0] - n, n):
-                        for j in range(0, param.shape[1] - n, n):
+                    for i in range(0, param.shape[0] , n):
+                        for j in range(0, param.shape[1] , n):
                             moy=torch.mean(torch.abs(param[i:i+n,j:j+n]))
                             #model_tiles +=1
                             if moy < thres * moy_param:
@@ -523,8 +523,8 @@ def prunetransformer(args):
                     #print("number of zero?",np.count_nonzero(param==0))
                     start_time = time.time()
                     # Your optimized loop here
-                    for i in range(0, param.shape[0] - n, n):
-                        for j in range(0, param.shape[1] - n, n):
+                    for i in range(0, param.shape[0] , n):
+                        for j in range(0, param.shape[1] , n):
                             moy=torch.mean(torch.abs(param[i:i+n,j:j+n]))
                             #print(moy.item())
                             # store moy for each tile for each layer
@@ -547,8 +547,8 @@ def prunetransformer(args):
                     # Step 3: Retrieve the threshold value
                     threshold = v_sorted[percentile_index]
                     #print("Threshold for the",round*100,"% lowest elements:", threshold, "index",roundile_index,"/",int(param.shape[0]*param.shape[1]/n*n),"layer moy",moy_param)
-                    for i in range(0, param.shape[0] - n, n):
-                        for j in range(0, param.shape[1] - n, n):
+                    for i in range(0, param.shape[0] , n):
+                        for j in range(0, param.shape[1] , n):
                             moy=torch.mean(torch.abs(param[i:i+n,j:j+n]))
                             if moy.item() < threshold: 
                                 with torch.no_grad():
