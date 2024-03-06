@@ -16,6 +16,8 @@ usage() {
     echo "  -j, --enc <value>"
     echo "  -k, --dec <value>"
     echo "  -l, --fixe <value>"
+    echo "  -o, --prune-asr-model-tile-percent"
+    echo "  -p, --prune-asr-model-tile-round"
     echo "  -s, --save-to <file>"
     echo "  -h, --help"
     echo "  -v, --verbose"
@@ -30,6 +32,8 @@ prune_asr_model_local=false
 amAtt=0.3
 am=0.3
 prune_asr_model_tile_bc=false
+prune_asr_model_tile_percent=false
+prune_asr_model_tile_round=false
 tile=2
 thres=0.6
 prune_asr_model_adapt=false
@@ -89,6 +93,12 @@ while [[ $# -gt 0 ]]; do
         -l|--fixe)
             fixe="$2"
             shift
+            ;;
+        -o|--prune-asr-model-tile-percent)
+            prune_asr_model_tile_percent=true
+            ;;
+        -p|--prune-asr-model-tile-round)
+            prune_asr_model_tile_round=true
             ;;
         -s|--save-to)
             save_to="$2"
@@ -156,6 +166,8 @@ prunemodel.py \
     --prune-asr-model-local $prune_asr_model_local \
     --prune-asr-model-adapt $prune_asr_model_adapt \
     --prune-asr-model-tile-bc $prune_asr_model_tile_bc \
+    --prune-asr-model-tile-percent $prune_asr_model_tile_percent \
+    --prune-asr-model-tile-round $prune_asr_model_tile_round \
     --am ${am} \
     --amAtt ${amAtt} \
     --enc $enc \

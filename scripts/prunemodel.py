@@ -84,6 +84,22 @@ def get_parser():
         help="Prune asr model then group weights",
     )
     parser.add_argument(
+        "--prune-asr-model-tile-percent",
+        type=lambda x: strtobool(x.strip()), nargs='?',
+        const=True, default=False,
+        #       type=bool,
+        #        default=False,
+        help="Prune asr model then group weights",
+    )
+    parser.add_argument(
+        "--prune-asr-model-tile-round",
+        type=lambda x: strtobool(x.strip()), nargs='?',
+        const=True, default=False,
+        #       type=bool,
+        #        default=False,
+        help="Prune asr model then group weights round",
+    )
+    parser.add_argument(
         "--tile",
         type=int,
         default=0,
