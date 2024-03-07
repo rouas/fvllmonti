@@ -443,14 +443,14 @@ def prunetransformer(args):
                     # Step 3: Retrieve the threshold value
                     threshold = v_sorted[percentile_index]
                     # check 
-                    print("nbelement under threshold",np.count_nonzero(blockmoy < threshold),"percentage=",100*np.count_nonzero(blockmoy < threshold)/len(blockmoy))
-                    #print("Threshold for the",percent*100,"% lowest elements:", threshold, "index",percentile_index,"/",int(param.shape[0]*param.shape[1]/n*n),"layer moy",moy_param)
+                    print("nbelement under threshold",np.count_nonzero(blockmoy <= threshold),"percentage=",100*np.count_nonzero(blockmoy <= threshold)/len(blockmoy))
+                    if args.verbose: print("Threshold for the",percent*100,"% lowest elements:", threshold, "index",percentile_index,"/",int(param.shape[0]*param.shape[1]/n*n),"layer moy",moy_param)
                     realtotal=0
                     for i in range(0, param.shape[0], n):
                         for j in range(0, param.shape[1], n):
                             realtotal+=1
                             moy=torch.mean(torch.abs(param[i:i+n,j:j+n]))
-                            if moy.item() < threshold: 
+                            if moy.item() <= threshold: 
                                 with torch.no_grad():
                                     param[i:i+n,j:j+n] = torch.zeros(n,n)
                                 layer_zerotiles+=1
