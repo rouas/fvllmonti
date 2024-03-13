@@ -624,7 +624,9 @@ def prunetransformer(args):
         if isinstance(module,(torch.nn.Linear)):
             nzeros += float(torch.sum(module.weight == 0))
             ntotal += float(module.weight.nelement())
-    print("prune_transformerc: final sparsity (all linear layers):", 100 * nzeros/ntotal)
+    print("prune_transformerc: final sparsity (all linear layers):", 100 * nzeros/ntotal,"(",nzeros,"/",ntotal,")")
+
+
 
     if args.save_to:
         print("modelprune: model saved in ",args.save_to)
