@@ -443,7 +443,7 @@ def prunetransformer(args):
                     # Step 3: Retrieve the threshold value
                     threshold = v_sorted[percentile_index]
                     # check 
-                    print("nbelement under threshold",np.count_nonzero(blockmoy <= threshold),"percentage=",100*np.count_nonzero(blockmoy <= threshold)/len(blockmoy))
+                    print("nbelement under",threshold,"threshold",np.count_nonzero(blockmoy <= threshold),"percentage=",100*np.count_nonzero(blockmoy <= threshold)/len(blockmoy))
                     if args.verbose: print("Threshold for the",percent*100,"% lowest elements:", threshold, "index",percentile_index,"/",int(param.shape[0]*param.shape[1]/n*n),"layer moy",moy_param)
                     realtotal=0
                     for i in range(0, param.shape[0], n):
@@ -487,6 +487,130 @@ def prunetransformer(args):
                         ntotal += float(module.weight.nelement())
             print("prune_asr_model_tile_percent: final sparsity:", 100 * nzeros/ntotal)
     ########## end prune_asr_model_tile_percent #######################
+
+##################################################################
+# versiun 2 is where the threshold is omputed globally, over the means of all tiles (so that deeper layer should not be prned as mush...)
+        if args.prune_asr_model_tile_percentV2:
+            print("prune_asr_model_tile_percentV2")
+            # let's try to see if we can compute a sparsity:
+            nzeros=ntotal=0
+            for name, module in model.named_modules():
+                if ("encoder.encoders." in str(name) or "decoder.decoders." in str(name)):
+                    if isinstance(module,(torch.nn.Linear)):
+                        nzeros += float(torch.sum(module.weight == 0))
+                        ntotal += float(module.weight.nelement())
+            print("prune_asr_model_tile_percent: initial sparsity:", 100 * nzeros/ntotal)
+
+            n = args.tile
+            thres = args.thres
+            am = args.am
+            sp_end = n_elt = 0
+            ntiles=0  
+            if args.tileFF is True:
+                print("prune_asr_model_tile_percent: tiles computed only on FF layers")
+                part="feed_forward"
+            else:
+                part="coder" # should work with all ?
+
+            model_tiles=0
+            model_zerotiles=0
+            global_mean=0
+
+            
+            nbblocks=0
+            totaltiles=0
+            # 1 count the number of blocks -> to allocate blockmoy
+            for name, param in model.named_parameters():
+                if (part in name and "weight" in name)  and ("conv" not in name) and ("norm" not in name):
+                    totaltiles+=int(param.shape[0]*param.shape[1]/(n*n))
+                    nbblocks+=1
+            print("nombre de blocks",nbblocks,"total tiles",totaltiles)
+            # 2 allocate and store the block mean 
+            blockmean=np.zeros(totaltiles)
+            nbblocks=0
+            tileindex = 0
+            for name, param in model.named_parameters():
+                if (part in name and "weight" in name)  and ("conv" not in name) and ("norm" not in name):
+                    if args.verbose: print(name,"matrix size : ",param.shape[0], " * ", param.shape[1], "=",param.shape[0]*param.shape[1],"->",param.shape[0]*param.shape[1]/(n*n),"tiles")
+                    blockmoy=np.zeros(int(param.shape[0]*param.shape[1]/(n*n)))
+                    layer_ntiles =  0
+                    layer_zerotiles = 0                    
+                    moy_param=torch.mean(torch.abs(param))
+                    #print("number of zero?",np.count_nonzero(param==0))
+                    start_time = time.time()
+                    for i in range(0, param.shape[0], n):
+                        for j in range(0, param.shape[1], n):
+                            moy=torch.mean(torch.abs(param[i:i+n,j:j+n]))
+                            #print(moy.item())
+                            # store moy for each tile for each layer
+                            splitname=name.split(".")
+                            blockmoy[layer_ntiles]=moy.item()
+                            blockmean[tileindex]=moy.item()
+                            ntiles += 1
+                            layer_ntiles += 1
+                            tileindex += 1
+            global_mean=np.mean(blockmean)
+            print("Nblocks",nbblocks,"global_mean",global_mean)
+            # Step 1: Sort the vector
+            v_sorted = np.sort(blockmean)
+            #print("zeros.",np.count_nonzero(v_sorted == 0))
+            percent=thres
+            # Step 2: Calculate the index for the Xth percentile
+            percentile_index = int(percent * len(v_sorted))
+            # Step 3: Retrieve the threshold value
+            threshold = v_sorted[percentile_index]
+            # check 
+            print("nbelement under",threshold,"threshold",np.count_nonzero(blockmean <= threshold),"percentage=",100*np.count_nonzero(blockmean <= threshold)/len(blockmean))
+        
+            # c'est parti
+            for name, param in model.named_parameters():
+                if (part in name and "weight" in name)  and ("conv" not in name) and ("norm" not in name):
+                    if args.verbose: print(name,"matrix size : ",param.shape[0], " * ", param.shape[1], "=",param.shape[0]*param.shape[1],"->",param.shape[0]*param.shape[1]/(n*n),"tiles")
+                    realtotal=0
+                    layer_zerotiles = 0
+                    for i in range(0, param.shape[0], n):
+                        for j in range(0, param.shape[1], n):
+                            realtotal+=1
+                            moy=torch.mean(torch.abs(param[i:i+n,j:j+n]))
+                            if moy.item() <= threshold: 
+                                with torch.no_grad():
+                                    param[i:i+n,j:j+n] = torch.zeros(n,n)
+                                layer_zerotiles+=1
+                    print("real number of tiles",realtotal)
+                    #print("tiles number :",layer_ntiles,"zero tiles",layer_zerotiles,"percent",layer_zerotiles/layer_ntiles,"consigne",percent,"threshold",threshold)
+
+                    
+                    if args.verbose: print("prune_asr_model_tile_percent: module name: ", name,"matrix size : ",param.shape[0], " * ", param.shape[1],"current number of tiles", model_tiles)
+                    total = (param.shape[0]*param.shape[1])/(n*n)
+                    model_tiles +=total
+                    model_zerotiles+=layer_zerotiles
+                    print("prune_asr_model_tile_percent:",name,"# tiles:",total,"pruned tiles", layer_zerotiles,"tiles pruning % ",100*layer_zerotiles/total)
+            
+            print("prune_asr_model_tile_percent: model: number of tiles", model_tiles,"number of pruned ntiles=    ",model_zerotiles,"pruned tiles  %:", model_zerotiles/model_tiles)
+
+            # compute sparsity for each layer
+            for name, module in model.named_modules():
+                if isinstance(module, (torch.nn.Linear)):
+                    sp_end += float(torch.sum(module.weight == 0))
+                    n_elt += float(module.weight.nelement())
+                    sp = float(torch.sum(module.weight == 0))
+                    n = float(module.weight.nelement())
+                    spars = sp/n
+                    if args.verbose: print("prune_asr_model_tile_percent: module ", name ," ", module, "spars : ", spars)
+
+            print("prune_asr_model_tile_percent: local mean tiles sparsity", 100 * sp_end/n_elt,"(",sp_end,"/",n_elt,")")
+
+            # let's try to see if we can compute a sparsity:
+            nzeros=ntotal=0
+            for name, module in model.named_modules():
+                if ("encoder.encoders." in str(name) or "decoder.decoders." in str(name)):
+                    if isinstance(module,(torch.nn.Linear)):
+                        nzeros += float(torch.sum(module.weight == 0))
+                        ntotal += float(module.weight.nelement())
+            print("prune_asr_model_tile_percent: final sparsity:", 100 * nzeros/ntotal)
+    ########## end prune_asr_model_tile_percent #######################
+
+
 
     if args.prune_asr_model_tile_round:
             print("prune_asr_model_tile_round")
