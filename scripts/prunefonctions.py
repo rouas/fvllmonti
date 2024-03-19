@@ -454,7 +454,7 @@ def prunetransformer(args):
                                 with torch.no_grad():
                                     param[i:i+n,j:j+n] = torch.zeros(n,n)
                                 layer_zerotiles+=1
-                    print("real number of tiles",realtotal)
+                    #print("real number of tiles",realtotal)
                     #print("tiles number :",layer_ntiles,"zero tiles",layer_zerotiles,"percent",layer_zerotiles/layer_ntiles,"consigne",percent,"threshold",threshold)
 
                     
@@ -576,7 +576,7 @@ def prunetransformer(args):
                                 with torch.no_grad():
                                     param[i:i+n,j:j+n] = torch.zeros(n,n)
                                 layer_zerotiles+=1
-                    print("real number of tiles",realtotal)
+                    #print("real number of tiles",realtotal)
                     #print("tiles number :",layer_ntiles,"zero tiles",layer_zerotiles,"percent",layer_zerotiles/layer_ntiles,"consigne",percent,"threshold",threshold)
 
                     
@@ -755,6 +755,7 @@ def prunetransformer(args):
     if args.save_to:
         print("modelprune: model saved in ",args.save_to)
         torch.save(model.state_dict(),args.save_to)
+        torch.save(model,args.save_to+".complete")
 
         # quantize model for saving and size measurement...        
         print("modelprune: quantize")
