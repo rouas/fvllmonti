@@ -36,7 +36,16 @@ def prunetransformer(args):
 
     """
         
-    model, train_args = load_trained_model(args.model, training=False)
+    if args.espnet2:
+        print("using espnet2 load method")
+        from pathlib import Path
+        from espnet2.tasks.asr import ASRTask
+        config_file = Path(args.model).parent / "config.yaml"
+        task = ASRTask
+        model, asr_train_args = task.build_model_from_file(config_file, args.model, 'cpu')
+    else:
+        print("using espnet1 load method")
+        model, train_args = load_trained_model(args.model, training=False)
         
     if args.verbose:
         print("pruning.py: Inference arguments...  ",args)
@@ -511,7 +520,8 @@ def prunetransformer(args):
                 part="feed_forward"
             else:
                 part="coder" # should work with all ?
-
+                print("prune_asr_model_tile_percent: tiles computed on ALL layers")
+                
             model_tiles=0
             model_zerotiles=0
             global_mean=0
@@ -521,7 +531,7 @@ def prunetransformer(args):
             totaltiles=0
             # 1 count the number of blocks -> to allocate blockmoy
             for name, param in model.named_parameters():
-                if (part in name and "weight" in name)  and ("conv" not in name) and ("norm" not in name):
+                if (part in name and "weight" in name)  and ("conv" not in name) and ("norm" not in name) and ("embed" not in name) and ("output" not in name) and ("src_attn" not in name):
                     totaltiles+=int(param.shape[0]*param.shape[1]/(n*n))
                     nbblocks+=1
             print("nombre de blocks",nbblocks,"total tiles",totaltiles)
@@ -530,8 +540,9 @@ def prunetransformer(args):
             nbblocks=0
             tileindex = 0
             for name, param in model.named_parameters():
-                if (part in name and "weight" in name)  and ("conv" not in name) and ("norm" not in name):
+                if (part in name and "weight" in name)  and ("conv" not in name) and ("norm" not in name) and ("embed" not in name) and ("output" not in name) and ("src_attn" not in name):
                     if args.verbose: print(name,"matrix size : ",param.shape[0], " * ", param.shape[1], "=",param.shape[0]*param.shape[1],"->",param.shape[0]*param.shape[1]/(n*n),"tiles")
+                    nbblocks+=1
                     blockmoy=np.zeros(int(param.shape[0]*param.shape[1]/(n*n)))
                     layer_ntiles =  0
                     layer_zerotiles = 0                    
@@ -564,7 +575,7 @@ def prunetransformer(args):
         
             # c'est parti
             for name, param in model.named_parameters():
-                if (part in name and "weight" in name)  and ("conv" not in name) and ("norm" not in name):
+                if (part in name and "weight" in name)  and ("conv" not in name) and ("norm" not in name) and ("embed" not in name) and ("output" not in name) and ("src_attn" not in name):
                     if args.verbose: print(name,"matrix size : ",param.shape[0], " * ", param.shape[1], "=",param.shape[0]*param.shape[1],"->",param.shape[0]*param.shape[1]/(n*n),"tiles")
                     realtotal=0
                     layer_zerotiles = 0
@@ -609,7 +620,6 @@ def prunetransformer(args):
                         ntotal += float(module.weight.nelement())
             print("prune_asr_model_tile_percent: final sparsity:", 100 * nzeros/ntotal)
     ########## end prune_asr_model_tile_percent #######################
-
 
 
     if args.prune_asr_model_tile_round:

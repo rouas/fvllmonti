@@ -2,7 +2,7 @@
 
 # Function to display usage information
 usage() {
-    echo "Usage: $0 -m <model_name> [OPTIONS]"
+    echo "Usage: $0 -m <model_file> [OPTIONS]"
     echo "Options:"
     echo "  -a, --prune-asr-model"
     echo "  -b, --asr-model-stats"
@@ -22,6 +22,7 @@ usage() {
     echo "  -s, --save-to <file>"
     echo "  -h, --help"
     echo "  -v, --verbose"
+    echo "  -2, --espnet2"
     exit 1
 }
 
@@ -44,6 +45,7 @@ dec=0.3
 fixe=0.3
 save_to=""
 model=""
+espnet2=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -113,6 +115,11 @@ while [[ $# -gt 0 ]]; do
             model="$2"
             shift
             ;;
+        -2|--espnet2)
+            espnet2=true
+            shift
+            ;;
+
         -h|--help)
             usage
             ;;
@@ -160,6 +167,12 @@ if [[ $save_to ]]; then
     echo "Saving output to: $save_to"
 fi
 
+if [[ $espnet2 == true ]]; then
+    echo "assuming espnet2 model"
+else
+    echo "assuming espnet1 model"
+fi
+
 echo "Model specified: $model"
 
 
@@ -183,6 +196,7 @@ prunemodel.py \
     --thres $thres \
     --tileFF true \
     --model  ${model} \
+    --espnet2 $espnet2 \
     --save-to $save_to \
     --verbose $verbose
 

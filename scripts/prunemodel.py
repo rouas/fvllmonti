@@ -37,6 +37,12 @@ def get_parser():
     parser.add_argument(
         "--model-conf", type=str, default=None, help="Model config file"
     )
+    parser.add_argument(
+        "--espnet2",
+        type=lambda x: strtobool(x.strip()), nargs='?',
+        const=True, default=False,
+        help="Use espnet2 model",    
+    )
     # search related
     # lbz: prune model related
     parser.add_argument(
