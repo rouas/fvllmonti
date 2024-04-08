@@ -10,23 +10,39 @@ import pandas as pd
 import sys, getopt
 
 def main(argv):
-        inputfile = ''
-        opts, args = getopt.getopt(argv,"hi:",["ifile="])
+        inputfile=''
+        espnet2 = False  # Default value for espnet2 option
+        try:
+                opts, args = getopt.getopt(argv, "hi:2", ["ifile=", "espnet2"])
+        except getopt.GetoptError:
+                print ('test.py -i <inputfile> [-2]')
+                sys.exit(2)
         for opt, arg in opts:
                 if opt == '-h':
-                        print ('test.py -i <inputfile>')
+                        print ('test.py -i <inputfile> [-2]')
                         sys.exit()
                 elif opt in ("-i", "--ifile"):
                         inputfile = arg
-        print ('Input file is ', inputfile)
+                elif opt == '-2':
+                        espnet2 = True
+        print ('Input file is', inputfile)
+        print ('ESPnet2 option is', espnet2)
 
 
-                        
-        #        m = torch.load("saved_models/pruned_tiles_quantized/The_model_complet")
-        #        m = torch.load(inputfile)
-        from espnet.asr.pytorch_backend.asr import load_trained_model
-        m, train_args = load_trained_model(inputfile, training=False)
-
+        if espnet2:
+                print("using espnet2 load method")
+                from pathlib import Path
+                from espnet2.tasks.asr import ASRTask
+                config_file = Path(inputfile).parent / "config.yaml"
+                task = ASRTask
+                m, train_args = task.build_model_from_file(config_file, inputfile, 'cpu')
+        else:
+                                
+                #        m = torch.load("saved_models/pruned_tiles_quantized/The_model_complet")
+                #        m = torch.load(inputfile)
+                from espnet.asr.pytorch_backend.asr import load_trained_model
+                m, train_args = load_trained_model(inputfile, training=False)
+        
 
         torch.set_printoptions(profile="full") # Pour afficher toutes les valeurs
 

@@ -204,7 +204,7 @@ if [[ $espnet2 == true ]]; then
     echo "saving as espnet2 packed model?"
     packed_model="${save_to}.espnet2.zip"
     config_file=$(dirname $model)/config.yaml
-    python -m espnet2.bin.pack asr \
+    python3 -m espnet2.bin.pack asr \
         --asr_train_config $config_file \
         --asr_model_file $save_to \
         --outpath "${packed_model}"

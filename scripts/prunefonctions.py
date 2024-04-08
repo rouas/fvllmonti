@@ -27,6 +27,7 @@ import torch.nn.functional as F
 # jlr
 from collections import Counter
 
+from espnet_onnx.export import ModelExport
 
 def prunetransformer(args):
     """prune with the given args.
@@ -776,7 +777,16 @@ def prunetransformer(args):
         size=os.path.getsize(args.save_to+".quant")
         print("pruned quantized model size: ", size/1e3)
 
-        
+        # onnx ? 
+        # export to onnx?
+        m = ModelExport()
+        transducer_conf = yaml.safe_load(Path('conf/decode_rnnt_conformer.yaml').read_text())
+        # speech2text = Speech2Text(asr_train_config="exp/asr_train_rnnt_conformer_raw_en_bpe5000_sp/config.yaml",
+        #                   asr_model_file="exp/asr_train_rnnt_conformer_raw_en_bpe5000_sp/latest.pth",
+        #                   transducer_conf=transducer_conf["transducer_conf"],
+        #                   lm_weight=0.0)
+
+        m.export(model, 'onnx_export', quantize=True)
 
 
         
