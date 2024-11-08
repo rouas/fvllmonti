@@ -12,10 +12,11 @@ import sys, getopt
 def main(argv):
         inputfile=''
         espnet2 = False  # Default value for espnet2 option
+        mttask = False # false = use ASR task for loading model
         try:
-                opts, args = getopt.getopt(argv, "hi:2", ["ifile=", "espnet2"])
+                opts, args = getopt.getopt(argv, "hi:23", ["ifile=", "espnet2","mttask"])
         except getopt.GetoptError:
-                print ('test.py -i <inputfile> [-2]')
+                print ('mesure_sparsity.py -i <inputfile> [-2] [-3]')
                 sys.exit(2)
         for opt, arg in opts:
                 if opt == '-h':
@@ -25,16 +26,27 @@ def main(argv):
                         inputfile = arg
                 elif opt == '-2':
                         espnet2 = True
+                elif opt == '-3':
+                        mttask = True
         print ('Input file is', inputfile)
         print ('ESPnet2 option is', espnet2)
+        print ('MTtask option is', mttask)
 
 
         if espnet2:
                 print("using espnet2 load method")
                 from pathlib import Path
-                from espnet2.tasks.asr import ASRTask
+                
                 config_file = Path(inputfile).parent / "config.yaml"
-                task = ASRTask
+                if mttask:
+                        print("using MTTask")
+                        from espnet2.tasks.mt import MTTask
+                        task = MTTask
+                else:
+                        print("using ASRTask")
+                        from espnet2.tasks.asr import ASRTask
+                        task = ASRTask
+                
                 m, train_args = task.build_model_from_file(config_file, inputfile, 'cpu')
         else:
                                 

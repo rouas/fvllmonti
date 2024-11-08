@@ -43,6 +43,12 @@ def get_parser():
         const=True, default=False,
         help="Use espnet2 model",    
     )
+    parser.add_argument(
+        "--mttask",
+        type=lambda x: strtobool(x.strip()), nargs='?',
+        const=True, default=False,
+        help="Use MTTask for espnet2 model",    
+    )
     # search related
     # lbz: prune model related
     parser.add_argument(
@@ -113,6 +119,15 @@ def get_parser():
         #       type=bool,
         #        default=False,
         help="Prune asr model then group weights round",
+    )
+
+    parser.add_argument(
+        "--prune-asr-model-tile-att",
+        type=lambda x: strtobool(x.strip()), nargs='?',
+        const=True, default=False,
+        #       type=bool,
+        #        default=False,
+        help="Prune asr model blocks (Attention layers)",
     )
     parser.add_argument(
         "--tile",

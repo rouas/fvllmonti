@@ -27,7 +27,7 @@ import torch.nn.functional as F
 # jlr
 from collections import Counter
 
-from espnet_onnx.export import ModelExport
+#from espnet_onnx.export import ModelExport
 
 def prunetransformer(args):
     """prune with the given args.
@@ -38,11 +38,18 @@ def prunetransformer(args):
     """
         
     if args.espnet2:
-        print("using espnet2 load method")
+        print("using espnet2 load method rakapouf")
         from pathlib import Path
         from espnet2.tasks.asr import ASRTask
         config_file = Path(args.model).parent / "config.yaml"
         task = ASRTask
+        if args.mttask:
+            print("setting task as MTTask")
+            from espnet2.tasks.mt import MTTask
+            task = MTTask
+        else:
+            print("using default ASR Task")
+            
         model, asr_train_args = task.build_model_from_file(config_file, args.model, 'cpu')
     else:
         print("using espnet1 load method")
@@ -622,6 +629,128 @@ def prunetransformer(args):
             print("prune_asr_model_tile_percent: final sparsity:", 100 * nzeros/ntotal)
     ########## end prune_asr_model_tile_percent #######################
 
+#################################################################
+# versiun 2 is where the threshold is omputed globally, over the means of all tiles (so that deeper layer should not be prned as mush...)
+# this is for attention layers ! 
+        if args.prune_asr_model_tile_att:
+            print("prune_asr_model_tile_att")
+            # let's try to see if we can compute a sparsity:
+            nzeros=ntotal=0
+            for name, module in model.named_modules():
+                if ("encoder.encoders." in str(name) or "decoder.decoders." in str(name)):
+                    if isinstance(module,(torch.nn.Linear)):
+                        nzeros += float(torch.sum(module.weight == 0))
+                        ntotal += float(module.weight.nelement())
+            print("prune_asr_model_tile_percent: initial sparsity:", 100 * nzeros/ntotal)
+
+            n = args.tile
+            thres = args.am
+            sp_end = n_elt = 0
+            ntiles=0  
+            attentionlayers=["linear_q", "linear_k", "linear_v", "linear_out"]
+            print("prune_asr_model_tile_percent: tiles computed only on Attention layers")
+            for part in attentionlayers:
+                
+                print(part)
+                #args.verbose=1
+                model_tiles=0
+                model_zerotiles=0
+                global_mean=0
+
+                
+                nbblocks=0
+                totaltiles=0
+                # 1 count the number of blocks -> to allocate blockmoy
+                for name, param in model.named_parameters():
+                    if (part in name and "weight" in name)  and ("conv" not in name) and ("norm" not in name) and ("embed" not in name) and ("output" not in name) and ("src_attn" not in name):
+                        totaltiles+=int(param.shape[0]*param.shape[1]/(n*n))
+                        nbblocks+=1
+                print("nombre de blocks",nbblocks,"total tiles",totaltiles)
+                # 2 allocate and store the block mean 
+                blockmean=np.zeros(totaltiles)
+                nbblocks=0
+                tileindex = 0
+                for name, param in model.named_parameters():
+                    if (part in name and "weight" in name)  and ("conv" not in name) and ("norm" not in name) and ("embed" not in name) and ("output" not in name) and ("src_attn" not in name):
+                        if args.verbose: print(name,"matrix size : ",param.shape[0], " * ", param.shape[1], "=",param.shape[0]*param.shape[1],"->",param.shape[0]*param.shape[1]/(n*n),"tiles")
+                        nbblocks+=1
+                        blockmoy=np.zeros(int(param.shape[0]*param.shape[1]/(n*n)))
+                        layer_ntiles =  0
+                        layer_zerotiles = 0                    
+                        moy_param=torch.mean(torch.abs(param))
+                        #print("number of zero?",np.count_nonzero(param==0))
+                        start_time = time.time()
+                        for i in range(0, param.shape[0], n):
+                            for j in range(0, param.shape[1], n):
+                                moy=torch.mean(torch.abs(param[i:i+n,j:j+n]))
+                                #print(moy.item())
+                                # store moy for each tile for each layer
+                                splitname=name.split(".")
+                                blockmoy[layer_ntiles]=moy.item()
+                                blockmean[tileindex]=moy.item()
+                                ntiles += 1
+                                layer_ntiles += 1
+                                tileindex += 1
+                global_mean=np.mean(blockmean)
+                print("Nblocks",nbblocks,"global_mean",global_mean)
+                # Step 1: Sort the vector
+                v_sorted = np.sort(blockmean)
+                #print("zeros.",np.count_nonzero(v_sorted == 0))
+                percent=thres
+                # Step 2: Calculate the index for the Xth percentile
+                percentile_index = int(percent * len(v_sorted))
+                # Step 3: Retrieve the threshold value
+                threshold = v_sorted[percentile_index]
+                # check 
+                print("nbelement under",threshold,"threshold",np.count_nonzero(blockmean <= threshold),"percentage=",100*np.count_nonzero(blockmean <= threshold)/len(blockmean))
+            
+                # c'est parti
+                for name, param in model.named_parameters():
+                    if (part in name and "weight" in name)  and ("conv" not in name) and ("norm" not in name) and ("embed" not in name) and ("output" not in name) and ("src_attn" not in name):
+                        if args.verbose: print(name,"matrix size : ",param.shape[0], " * ", param.shape[1], "=",param.shape[0]*param.shape[1],"->",param.shape[0]*param.shape[1]/(n*n),"tiles")
+                        realtotal=0
+                        layer_zerotiles = 0
+                        for i in range(0, param.shape[0], n):
+                            for j in range(0, param.shape[1], n):
+                                realtotal+=1
+                                moy=torch.mean(torch.abs(param[i:i+n,j:j+n]))
+                                if moy.item() <= threshold: 
+                                    with torch.no_grad():
+                                        param[i:i+n,j:j+n] = torch.zeros(n,n)
+                                    layer_zerotiles+=1
+                        #print("real number of tiles",realtotal)
+                        #print("tiles number :",layer_ntiles,"zero tiles",layer_zerotiles,"percent",layer_zerotiles/layer_ntiles,"consigne",percent,"threshold",threshold)
+
+                        
+                        if args.verbose: print("prune_asr_model_tile_percent: module name: ", name,"matrix size : ",param.shape[0], " * ", param.shape[1],"current number of tiles", model_tiles)
+                        total = (param.shape[0]*param.shape[1])/(n*n)
+                        model_tiles +=total
+                        model_zerotiles+=layer_zerotiles
+                        print("prune_asr_model_tile_percent:",name,"# tiles:",total,"pruned tiles", layer_zerotiles,"tiles pruning % ",100*layer_zerotiles/total)
+                
+                print("prune_asr_model_tile_percent: model: number of tiles", model_tiles,"number of pruned ntiles=    ",model_zerotiles,"pruned tiles  %:", model_zerotiles/model_tiles)
+
+            # compute sparsity for each layer
+            for name, module in model.named_modules():
+                if isinstance(module, (torch.nn.Linear)):
+                    sp_end += float(torch.sum(module.weight == 0))
+                    n_elt += float(module.weight.nelement())
+                    sp = float(torch.sum(module.weight == 0))
+                    n = float(module.weight.nelement())
+                    spars = sp/n
+                    if args.verbose: print("prune_asr_model_tile_percent: module ", name ," ", module, "spars : ", spars)
+
+            print("prune_asr_model_tile_percent: local mean tiles sparsity", 100 * sp_end/n_elt,"(",sp_end,"/",n_elt,")")
+
+            # let's try to see if we can compute a sparsity:
+            nzeros=ntotal=0
+            for name, module in model.named_modules():
+                if ("encoder.encoders." in str(name) or "decoder.decoders." in str(name)):
+                    if isinstance(module,(torch.nn.Linear)):
+                        nzeros += float(torch.sum(module.weight == 0))
+                        ntotal += float(module.weight.nelement())
+            print("prune_asr_model_tile_Attention: final sparsity:", 100 * nzeros/ntotal)
+    ########## end prune_asr_model_tile_att #######################
 
     if args.prune_asr_model_tile_round:
             print("prune_asr_model_tile_round")
@@ -779,14 +908,14 @@ def prunetransformer(args):
 
         # onnx ? 
         # export to onnx?
-        m = ModelExport()
-        transducer_conf = yaml.safe_load(Path('conf/decode_rnnt_conformer.yaml').read_text())
+        #m = ModelExport()
+        #transducer_conf = yaml.safe_load(Path('conf/decode_rnnt_conformer.yaml').read_text())
         # speech2text = Speech2Text(asr_train_config="exp/asr_train_rnnt_conformer_raw_en_bpe5000_sp/config.yaml",
         #                   asr_model_file="exp/asr_train_rnnt_conformer_raw_en_bpe5000_sp/latest.pth",
         #                   transducer_conf=transducer_conf["transducer_conf"],
         #                   lm_weight=0.0)
 
-        m.export(model, 'onnx_export', quantize=True)
+       # m.export(model, 'onnx_export', quantize=True)
 
 
         

@@ -19,10 +19,12 @@ usage() {
     echo "  -o, --prune-asr-model-tile-percent"
     echo "  -q, --prune-asr-model-tile-percentV2"
     echo "  -p, --prune-asr-model-tile-round"
+    echo "  -t, --prune-asr-model-tile-att"
     echo "  -s, --save-to <file>"
     echo "  -h, --help"
     echo "  -v, --verbose"
     echo "  -2, --espnet2"
+    echo "  -3, --mttask"
     exit 1
 }
 
@@ -37,6 +39,7 @@ prune_asr_model_tile_bc=false
 prune_asr_model_tile_percent=false
 prune_asr_model_tile_percentV2=false
 prune_asr_model_tile_round=false
+prune_asr_model_tile_att=false
 tile=2
 thres=0.6
 prune_asr_model_adapt=false
@@ -46,6 +49,7 @@ fixe=0.3
 save_to=""
 model=""
 espnet2=false
+mttask=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -107,6 +111,9 @@ while [[ $# -gt 0 ]]; do
         -p|--prune-asr-model-tile-round)
             prune_asr_model_tile_round=true
             ;;
+        -t|--prune-asr-model-tile-att)
+            prune_asr_model_tile_att=true
+            ;;
         -s|--save-to)
             save_to="$2"
             shift
@@ -117,9 +124,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -2|--espnet2)
             espnet2=true
-            shift
             ;;
-
+	    -3|--mttask)
+            mttask=true
+            ;;
         -h|--help)
             usage
             ;;
@@ -173,10 +181,20 @@ else
     echo "assuming espnet1 model"
 fi
 
+echo $mttask
+
+if [[ $mttask == true ]]; then
+    echo "using MT TASK for the espnet2 blabla"
+else
+    echo "not using MT Task -> ASRTask"
+fi
+
+
 echo "Model specified: $model"
 
 
-. ~/Sources/git/espnet/tools/activate_python.sh
+#. ~/Sources/git/espnet/tools/activate_python.sh
+. ~/Sources/git/espnet-vanilla/espnet/tools/activate_python.sh
 
 prunemodel.py \
     --prune-asr-model $prune_asr_model \
@@ -186,6 +204,7 @@ prunemodel.py \
     --prune-asr-model-tile-bc $prune_asr_model_tile_bc \
     --prune-asr-model-tile-percent $prune_asr_model_tile_percent \
     --prune-asr-model-tile-percentV2 $prune_asr_model_tile_percentV2 \
+    --prune-asr-model-tile-att $prune_asr_model_tile_att \
     --prune-asr-model-tile-round $prune_asr_model_tile_round \
     --am ${am} \
     --amAtt ${amAtt} \
@@ -197,6 +216,7 @@ prunemodel.py \
     --tileFF true \
     --model  ${model} \
     --espnet2 $espnet2 \
+    --mttask $mttask \
     --save-to $save_to \
     --verbose $verbose
 
