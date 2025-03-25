@@ -68,6 +68,8 @@ def main(argv):
 #                                print(name, "module name:   ", module)
                                 #print("*******************")
                                 
+                                # mesure la moyenne pour chaque block
+                                moy=float(torch.mean(torch.abs(module.weight)))
                                 
                                 # let's try to see if we can compute a sparsity:
                                 nzeros=ntotal=0
@@ -75,7 +77,7 @@ def main(argv):
                                 ntotal += float(module.weight.nelement())
                                 GLOBNZ+=nzeros
                                 TOTAL+=ntotal
-                                print(name, "module name:   ", module, "sparsity : ", 100 * nzeros/ntotal, "(",nzeros,"/",ntotal,")")
+                                print(name, "module name:   ", module, "sparsity : ", 100 * nzeros/ntotal, "(",nzeros,"/",ntotal,")","moyenne",moy)
 
         print("global pruning rate = ",GLOBNZ/TOTAL, "(",GLOBNZ,"/",TOTAL,")")
                         

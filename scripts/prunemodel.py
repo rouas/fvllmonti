@@ -60,74 +60,12 @@ def get_parser():
         help="Prune asr model",
     )
     parser.add_argument(
-        "--prune-asr-model-global",
-        type=lambda x: strtobool(x.strip()), nargs='?',
-        const=True, default=False,
-        #        type=bool,
-        #        default=False,
-        help="Prune asr model global",
-    )
-    parser.add_argument(
-        "--am",
-        type=float,
-        default=0.3,
-        help="Prune asr model - pruning amount",
-    )
-    parser.add_argument(
-        "--amAtt",
-        type=float,
-        default=0.3,
-        help="Prune asr model (attention only) - amAtt",
-    )
-    parser.add_argument(
-        "--prune-asr-model-local",
-        type=lambda x: strtobool(x.strip()), nargs='?',
-        const=True, default=False,
-        #       type=bool,
-        #        default=False,
-        help="Prune asr model local",
-    )
-    parser.add_argument(
-        "--prune-asr-model-tile-bc",
-        type=lambda x: strtobool(x.strip()), nargs='?',
-        const=True, default=False,
-        #       type=bool,
-        #        default=False,
-        help="Prune asr model then group weights",
-    )
-    parser.add_argument(
-        "--prune-asr-model-tile-percent",
-        type=lambda x: strtobool(x.strip()), nargs='?',
-        const=True, default=False,
-        #       type=bool,
-        #        default=False,
-        help="Prune asr model then group weights",
-    )
-    parser.add_argument(
         "--prune-asr-model-tile-percentV2",
         type=lambda x: strtobool(x.strip()), nargs='?',
         const=True, default=False,
         #       type=bool,
         #        default=False,
         help="Prune asr model then group weights",
-    )
-
-    parser.add_argument(
-        "--prune-asr-model-tile-round",
-        type=lambda x: strtobool(x.strip()), nargs='?',
-        const=True, default=False,
-        #       type=bool,
-        #        default=False,
-        help="Prune asr model then group weights round",
-    )
-
-    parser.add_argument(
-        "--prune-asr-model-tile-att",
-        type=lambda x: strtobool(x.strip()), nargs='?',
-        const=True, default=False,
-        #       type=bool,
-        #        default=False,
-        help="Prune asr model blocks (Attention layers)",
     )
     parser.add_argument(
         "--tile",
@@ -140,32 +78,6 @@ def get_parser():
         type=float,
         default=0.0,
         help="Prune asr model then group weights into tiles",
-    )
-    parser.add_argument(
-        "--prune-asr-model-adapt",
-        type=lambda x: strtobool(x.strip()), nargs='?',
-        const=True, default=False,
-        #       type=bool,
-        #        default=False,
-        help="Prune asr model adaptive",
-    )
-    parser.add_argument(
-        "--enc",
-        type=float,
-        default=0.3,
-        help="Pruning rate of the asr model encoder",
-    )
-    parser.add_argument(
-        "--dec",
-        type=float,
-        default=0.3,
-        help="Pruning rate of the  asr model decoder",
-    )
-    parser.add_argument(
-        "--fixe",
-        type=float,
-        default=0.3,
-        help="Prune asr model- fixed rate",
     )
     parser.add_argument(
         "--asr-model-stats",
