@@ -572,6 +572,7 @@ def prunetransformer(args):
             print("Nblocks",nbblocks,"global_mean",global_mean)
             # Step 1: Sort the vector
             v_sorted = np.sort(blockmean)
+            #np.savetxt("vsorted.txt",v_sorted)
             #print("zeros.",np.count_nonzero(v_sorted == 0))
             percent=thres
             # Step 2: Calculate the index for the Xth percentile
