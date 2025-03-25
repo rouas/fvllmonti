@@ -15,6 +15,7 @@ usage() {
     echo "  -v, --verbose"
     echo "  -2, --espnet2"
     echo "  -3, --mttask"
+    echo "  -T, --task <ASRTask>"
     exit 1
 }
 
@@ -22,18 +23,14 @@ usage() {
 verbose=0
 prune_asr_model=false
 asr_model_stats=false
-prune_asr_model_local=false
 prune_asr_model_tile_percentV2=false
 tile=2
 thres=0.6
-prune_asr_model_adapt=false
-enc=0.5
-dec=0.3
-fixe=0.3
 save_to=""
 model=""
 espnet2=false
 mttask=false
+task="ASRTask"
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -49,20 +46,6 @@ while [[ $# -gt 0 ]]; do
         -b|--asr-model-stats)
             asr_model_stats=true
             ;;
-        -c|--prune-asr-model-local)
-            prune_asr_model_local=true
-            ;;
-        -d|--amAtt)
-            amAtt=$2
-	    shift
-            ;;
-        -e|--am)
-            am=$2
-	    shift
-            ;;
-        -f|--prune-asr-model-tile-bc)
-            prune_asr_model_tile_bc=true
-            ;;
         -g|--tile)
             tile=$2
 	    shift
@@ -71,32 +54,8 @@ while [[ $# -gt 0 ]]; do
             thres="$2"
             shift
             ;;
-        -i|--prune-asr-model-adapt)
-            prune_asr_model_adapt=true
-            ;;
-        -j|--enc)
-            enc="$2"
-            shift
-            ;;
-        -k|--dec)
-            dec="$2"
-            shift
-            ;;
-        -l|--fixe)
-            fixe="$2"
-            shift
-            ;;
-        -o|--prune-asr-model-tile-percent)
-            prune_asr_model_tile_percent=true
-            ;;
         -q|--prune-asr-model-tile-percentV2)
             prune_asr_model_tile_percentV2=true
-            ;;
-        -p|--prune-asr-model-tile-round)
-            prune_asr_model_tile_round=true
-            ;;
-        -t|--prune-asr-model-tile-att)
-            prune_asr_model_tile_att=true
             ;;
         -s|--save-to)
             save_to="$2"
@@ -111,6 +70,10 @@ while [[ $# -gt 0 ]]; do
             ;;
 	    -3|--mttask)
             mttask=true
+            ;;
+        -T|--task)
+            task="$2"
+            shift
             ;;
         -h|--help)
             usage
@@ -136,20 +99,8 @@ if [[ -z $save_to ]]; then
 fi
 
 # Example usage of options
-if [[ $prune_asr_model_local == true ]]; then
-    echo "Prune ASR Model local (simple pruning) option selected"
-    echo "attention rate = $amAtt"
-    echo "FF rate = $am"
-fi
 
-if [[ $prune_asr_model_adapt == true ]]; then
-    echo "Prune ASR Model adapt (variable rate) option selected"
-    echo "attention rate = $fixe"
-    echo "encoder rate = $enc"
-    echo "decoder rate = $dec"
-fi
-
-if [[ $prune_asr_model_tile_bc == true ]]; then
+if [[ $prune_asr_model_tile_percentV2 == true ]]; then
     echo "Prune ASR Model tile bc (block pruning) option selected"
     echo "block size = $tile"
     echo "threshold = $thres"
@@ -165,7 +116,7 @@ else
     echo "assuming espnet1 model"
 fi
 
-echo $mttask
+echo "mttask = $mttask"
 
 if [[ $mttask == true ]]; then
     echo "using MT TASK for the espnet2 blabla"
@@ -173,29 +124,39 @@ else
     echo "not using MT Task -> ASRTask"
 fi
 
+echo "task = $task"
+if [[ $task == "ASRTask" ]]; then
+    echo "using ASRTask"
+else
+    if [[ $task == "MTTask" ]]; then
+        echo "using MTTask"
+    else
+        if [[ $task == "STTask" ]]; then
+            echo "using STTask"
+        else
+            echo "task $task not recognized"
+        fi
+    fi
+fi
+
+
 
 echo "Model specified: $model"
 
 
 #. ~/Sources/git/espnet/tools/activate_python.sh
-. ~/Sources/git/espnet-vanilla/espnet/tools/activate_python.sh
+. ~/Sources/git/espnet2025/espnet/tools/activate_python.sh
 
 prunemodel.py \
     --prune-asr-model $prune_asr_model \
     --asr-model-stats $asr_model_stats \
-    --prune-asr-model-local $prune_asr_model_local \
     --prune-asr-model-tile-percentV2 $prune_asr_model_tile_percentV2 \
-    --am ${am} \
-    --amAtt ${amAtt} \
-    --enc $enc \
-    --dec $dec \
-    --fixe ${fixe} \
     --tile $tile \
     --thres $thres \
-    --tileFF true \
     --model  ${model} \
     --espnet2 $espnet2 \
     --mttask $mttask \
+    --task $task \
     --save-to $save_to \
     --verbose $verbose
 

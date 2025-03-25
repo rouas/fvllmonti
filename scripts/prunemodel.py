@@ -44,6 +44,9 @@ def get_parser():
         help="Use espnet2 model",    
     )
     parser.add_argument(
+        "--task",type=str, required=False,default="ASRTask",help="specify the task (e.g. ASRTask, MTTask, STTask)"
+    )
+    parser.add_argument(
         "--mttask",
         type=lambda x: strtobool(x.strip()), nargs='?',
         const=True, default=False,
@@ -96,7 +99,7 @@ def get_parser():
     parser.add_argument(
         "--tileFF",
         type=lambda x: strtobool(x.strip()), nargs='?',
-        const=True, default=False,
+        const=True, default=True,
         #       type=bool,
         #        default=False,
         help="tiles only on FF layers",

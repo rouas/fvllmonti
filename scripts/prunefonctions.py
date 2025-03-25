@@ -40,16 +40,21 @@ def prunetransformer(args):
         
     if args.espnet2:
         print("using espnet2 load method rakapouf")
-        from pathlib import Path
-        from espnet2.tasks.asr import ASRTask
-        config_file = Path(args.model).parent / "config.yaml"
-        task = ASRTask
-        if args.mttask:
-            print("setting task as MTTask")
+
+        print("the task is ",args.task)
+        if args.task == "ASRTask":
+            from espnet2.tasks.asr import ASRTask
+            task = ASRTask
+        if args.task == "MTTask":
             from espnet2.tasks.mt import MTTask
             task = MTTask
-        else:
-            print("using default ASR Task")
+            print("setting task as MTTask")
+        if args.task == "STTask":
+            from espnet2.tasks.st import STTask
+            task = STTask
+      
+        from pathlib import Path
+        config_file = Path(args.model).parent / "config.yaml"
             
         model, asr_train_args = task.build_model_from_file(config_file, args.model, 'cpu')
     else:
@@ -239,7 +244,6 @@ def prunetransformer(args):
 
             n = args.tile
             thres = args.thres
-            am = args.am
             sp_end = n_elt = 0
             ntiles=0  
             if args.tileFF is True:
