@@ -216,48 +216,8 @@ def prunetransformer(args):
         if args.verbose:
 
             print("args.prune_asr_model:",args.prune_asr_model)
-            print("args.prune_asr_local:",args.prune_asr_model_local)
-        
-        if args.prune_asr_model_local:
-            print("prune_asr_model_local: FF rate=",args.am," Attention rate=",args.amAtt)
-            # let's try to see if we can compute a sparsity:
-            nzeros=ntotal=0
-            for name, module in model.named_modules():
-                if ("encoder.encoders." in str(name) or "decoder.decoders." in str(name)):
-                    if isinstance(module,(torch.nn.Linear)):
-                        nzeros += float(torch.sum(module.weight == 0))
-                        ntotal += float(module.weight.nelement())
-            print("prune_asr_model_local: sparsity for all linear modules before local pruning:", 100 * nzeros/ntotal)
-            
-            am = args.am
-            amAtt = args.amAtt
-            sp_end = n_elt = sp_ini = 0
-
-            # JLR modif pour des taux de prining différents entre FF et attention 
-            for name, module in model.named_modules():
-                if ("encoder.encoders." in str(name) or "decoder.decoders." in str(name)):
-                    if("feed_forward" in str(name)):
-                        if isinstance(module,(torch.nn.Linear)):
-                            if args.verbose: print("pruned module: name ",name," module ",module)
-                            sp_ini +=  float(torch.sum(module.weight == 0))
-                            prune.l1_unstructured(module, name='weight', amount=am)
-                            prune.remove(module, 'weight')
-                            sp_end += float(torch.sum(module.weight == 0))
-                            n_elt += float(module.weight.nelement())
-                    #if("self_attn" in str(name)):
-                    if("attn" in str(name)):
-                        if isinstance(module,(torch.nn.Linear)):
-                            if args.verbose: print("pruned module: name ",name," module ",module)
-                            sp_ini +=  float(torch.sum(module.weight == 0))
-                            prune.l1_unstructured(module, name='weight', amount=amAtt)
-                            prune.remove(module, 'weight')
-                            sp_end += float(torch.sum(module.weight == 0))
-                            n_elt += float(module.weight.nelement())
-
-            print("prune_asr_model_local: initial sparsity", 100 * sp_ini/n_elt)
-            print("prune_asr_model_local: final sparsity", 100 * sp_end/n_elt, "(",sp_end,"/",n_elt,")")
-
-
+      
+ 
 
             
             
